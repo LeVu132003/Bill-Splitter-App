@@ -16,7 +16,7 @@ function applyGuestCookies(
   pinHash: string,
   isAdmin: boolean
 ) {
-  response.cookies.set(`room_${roomCode}_member`, encodeURIComponent(memberName), {
+  response.cookies.set(`room_${roomCode}_member`, memberName, {
     path: '/',
     maxAge: COOKIE_MAX_AGE,
     sameSite: 'lax',
