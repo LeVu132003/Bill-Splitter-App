@@ -54,7 +54,9 @@ export default async function RoomPage({
     }
 
     if (!myName) {
-      redirect('/')
+      // User is authenticated but hasn't joined this room yet.
+      // Redirect to the entry page to select a member.
+      redirect(`/guest?r=${roomCode}`)
     }
 
     const pin = cookieStore.get(`room_${roomCode}_pin`)?.value || ''

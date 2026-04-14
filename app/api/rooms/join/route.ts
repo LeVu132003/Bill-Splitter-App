@@ -7,24 +7,23 @@ import { cookies } from 'next/headers'
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 30 // 30 days in seconds
 
 /**
- * Set guest session cookies
+ * Set guest session cookies directly on the NextResponse
  */
-async function setGuestCookies(
+function applyGuestCookies(
+  response: NextResponse,
   roomCode: string,
   memberName: string,
   pinHash: string,
   isAdmin: boolean
 ) {
-  const cookieStore = await cookies()
-  
-  cookieStore.set(`room_${roomCode}_member`, encodeURIComponent(memberName), {
+  response.cookies.set(`room_${roomCode}_member`, encodeURIComponent(memberName), {
     path: '/',
     maxAge: COOKIE_MAX_AGE,
     sameSite: 'lax',
     httpOnly: true,
   })
   
-  cookieStore.set(`room_${roomCode}_pin`, pinHash, {
+  response.cookies.set(`room_${roomCode}_pin`, pinHash, {
     path: '/',
     maxAge: COOKIE_MAX_AGE,
     sameSite: 'lax',
@@ -32,13 +31,15 @@ async function setGuestCookies(
   })
 
   if (isAdmin) {
-    cookieStore.set(`room_${roomCode}_admin`, 'true', {
+    response.cookies.set(`room_${roomCode}_admin`, 'true', {
       path: '/',
       maxAge: COOKIE_MAX_AGE,
       sameSite: 'lax',
       httpOnly: true,
     })
   }
+  
+  return response
 }
 
 /**
@@ -103,8 +104,8 @@ export async function POST(request: NextRequest) {
 
     if (isAdmin) {
       const pinHash = hashPin(pin)
-      await setGuestCookies(roomCode, memberName, pinHash, true)
-      return NextResponse.json({ success: true, memberName, isAdmin: true })
+      let response = NextResponse.json({ success: true, memberName, isAdmin: true })
+      return applyGuestCookies(response, roomCode, memberName, pinHash, true)
     }
 
     // For first-time users (no PIN set), save the PIN
@@ -128,8 +129,8 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Failed to save PIN' }, { status: 500 })
       }
 
-      await setGuestCookies(roomCode, memberName, pinHash, false)
-      return NextResponse.json({ success: true, memberName, isAdmin: false })
+      let response = NextResponse.json({ success: true, memberName, isAdmin: false })
+      return applyGuestCookies(response, roomCode, memberName, pinHash, false)
     }
 
     // Verify PIN for existing users
@@ -138,8 +139,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Incorrect PIN' }, { status: 401 })
     }
 
-    await setGuestCookies(roomCode, memberName, pinHash, false)
-    return NextResponse.json({ success: true, memberName, isAdmin: false })
+    let response = NextResponse.json({ success: true, memberName, isAdmin: false })
+    return applyGuestCookies(response, roomCode, memberName, pinHash, false)
   }
 
   // Handle authenticated user join flow
@@ -176,5 +177,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to join room' }, { status: 500 })
   }
 
-  return NextResponse.json({ success: true })
+  let response = NextResponse.json({ success: true })
+  
+  // Set cookies for authenticated users too, so they can directly access the room seamlessly
+  return applyGuestCookies(response, roomCode, memberName, pin || '', false)
 }
