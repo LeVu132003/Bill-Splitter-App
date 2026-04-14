@@ -214,6 +214,9 @@ export default function HomePage() {
             <button className="btn btn-full" onClick={() => setStep('join')}>
               Tham gia phòng có sẵn
             </button>
+            <button className="btn btn-full" onClick={() => router.push('/dashboard')} style={{ color: 'var(--t2)', fontSize: 13 }}>
+              📊 Thống kê chi tiêu
+            </button>
           </div>
         </div>
       </div>

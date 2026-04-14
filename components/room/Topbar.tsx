@@ -2,9 +2,11 @@
 
 import { useRoom } from './RoomProvider'
 import { getNames } from '@/lib/utils'
+import { useRouter } from 'next/navigation'
 
 export default function Topbar() {
   const { st, myName, isAdmin, roomCode } = useRoom()
+  const router = useRouter()
   const memberCount = getNames(st.members).length
   const txCount = (st.txs || []).length
 
@@ -14,6 +16,13 @@ export default function Topbar() {
 
   return (
     <div className="topbar">
+      <button
+        onClick={() => router.push('/')}
+        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--t2)', fontSize: 18, padding: '0 4px', flexShrink: 0, display: 'flex', alignItems: 'center' }}
+        title="Quay lại danh sách"
+      >
+        ←
+      </button>
       <div className="tinfo">
         <div className="tname">{st.name}</div>
         <div className="tsub">
