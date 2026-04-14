@@ -1,9 +1,17 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 
 type Step = 'home' | 'create' | 'join' | 'join-member' | 'join-pin'
+
+interface MyRoom {
+  code: string
+  name: string
+  memberName: string
+  txCount: number
+  joinedAt: string
+}
 
 function setRoomSession(code: string, memberName: string, pin: string) {
   document.cookie = `room_${code}_member=${encodeURIComponent(memberName)}; path=/; max-age=86400`
@@ -15,6 +23,14 @@ export default function HomePage() {
   const [step, setStep] = useState<Step>('home')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [myRooms, setMyRooms] = useState<MyRoom[]>([])
+
+  useEffect(() => {
+    fetch('/api/rooms/mine')
+      .then(r => r.json())
+      .then(d => setMyRooms(d.rooms || []))
+      .catch(() => {})
+  }, [])
 
   // Create room state
   const [eventName, setEventName] = useState('')
@@ -156,6 +172,36 @@ export default function HomePage() {
           <div style={{ fontSize: 48, marginBottom: '0.5rem' }}>💸</div>
           <h1 style={{ fontSize: 24, fontWeight: 700 }}>Chia Tiền Nhóm</h1>
         </div>
+
+        {/* Danh sách phòng đã tham gia */}
+        {myRooms.length > 0 && (
+          <div style={{ marginBottom: '1.5rem' }}>
+            <div className="slbl" style={{ marginBottom: '.6rem' }}>Phòng của bạn</div>
+            {myRooms.map(room => (
+              <button
+                key={room.code}
+                className="btn btn-full"
+                style={{ marginBottom: 8, justifyContent: 'flex-start', gap: 12, padding: '12px 14px' }}
+                onClick={() => {
+                  setRoomSession(room.code, room.memberName, '')
+                  router.push(`/room/${room.code}`)
+                }}
+              >
+                <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--abg)', border: '1px solid var(--aborder)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>
+                  💸
+                </div>
+                <div style={{ flex: 1, textAlign: 'left' }}>
+                  <div style={{ fontWeight: 600, fontSize: 14 }}>{room.name}</div>
+                  <div style={{ fontSize: 11, color: 'var(--t3)', marginTop: 2 }}>
+                    {room.memberName} · {room.txCount} khoản · {room.code}
+                  </div>
+                </div>
+                <span style={{ color: 'var(--t3)', fontSize: 13 }}>→</span>
+              </button>
+            ))}
+          </div>
+        )}
+
         <div className="card">
           <div className="cb" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <button className="btn btn-p btn-full" onClick={() => setStep('create')}>
