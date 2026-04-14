@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//Users/lehoanganhvu/Projects/bill-splitter-app/**)",
+      "Read(//Users/lehoanganhvu/Downloads/**)",
+      "Bash(git -C /Users/lehoanganhvu/Projects/bill-splitter-app/.worktrees/nextjs-migration status)",
+      "Read(//Users/lehoanganhvu/Projects/**)"
+    ]
+  }
+}
