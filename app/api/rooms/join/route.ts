@@ -2,26 +2,43 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { createSupabaseServerClient, createSupabaseAuthClient } from '@/lib/supabase/server'
 import { hashPin, ADMIN_NAME, ADMIN_PIN } from '@/lib/utils'
 import type { RoomState } from '@/lib/types'
+import { cookies } from 'next/headers'
 
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 30 // 30 days in seconds
 
 /**
- * Build a Set-Cookie string for guest session
+ * Set guest session cookies
  */
-function buildGuestCookies(
+async function setGuestCookies(
   roomCode: string,
   memberName: string,
   pinHash: string,
   isAdmin: boolean
-): string[] {
-  const cookies: string[] = [
-    `room_${roomCode}_member=${encodeURIComponent(memberName)}; Path=/; Max-Age=${COOKIE_MAX_AGE}; SameSite=Lax; HttpOnly`,
-    `room_${roomCode}_pin=${pinHash}; Path=/; Max-Age=${COOKIE_MAX_AGE}; SameSite=Lax; HttpOnly`,
-  ]
+) {
+  const cookieStore = await cookies()
+  
+  cookieStore.set(`room_${roomCode}_member`, encodeURIComponent(memberName), {
+    path: '/',
+    maxAge: COOKIE_MAX_AGE,
+    sameSite: 'lax',
+    httpOnly: true,
+  })
+  
+  cookieStore.set(`room_${roomCode}_pin`, pinHash, {
+    path: '/',
+    maxAge: COOKIE_MAX_AGE,
+    sameSite: 'lax',
+    httpOnly: true,
+  })
+
   if (isAdmin) {
-    cookies.push(`room_${roomCode}_admin=true; Path=/; Max-Age=${COOKIE_MAX_AGE}; SameSite=Lax; HttpOnly`)
+    cookieStore.set(`room_${roomCode}_admin`, 'true', {
+      path: '/',
+      maxAge: COOKIE_MAX_AGE,
+      sameSite: 'lax',
+      httpOnly: true,
+    })
   }
-  return cookies
 }
 
 /**
@@ -86,11 +103,8 @@ export async function POST(request: NextRequest) {
 
     if (isAdmin) {
       const pinHash = hashPin(pin)
-      const response = NextResponse.json({ success: true, memberName, isAdmin: true })
-      for (const cookie of buildGuestCookies(roomCode, memberName, pinHash, true)) {
-        response.headers.append('Set-Cookie', cookie)
-      }
-      return response
+      await setGuestCookies(roomCode, memberName, pinHash, true)
+      return NextResponse.json({ success: true, memberName, isAdmin: true })
     }
 
     // For first-time users (no PIN set), save the PIN
@@ -114,11 +128,8 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Failed to save PIN' }, { status: 500 })
       }
 
-      const response = NextResponse.json({ success: true, memberName, isAdmin: false })
-      for (const cookie of buildGuestCookies(roomCode, memberName, pinHash, false)) {
-        response.headers.append('Set-Cookie', cookie)
-      }
-      return response
+      await setGuestCookies(roomCode, memberName, pinHash, false)
+      return NextResponse.json({ success: true, memberName, isAdmin: false })
     }
 
     // Verify PIN for existing users
@@ -127,11 +138,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Incorrect PIN' }, { status: 401 })
     }
 
-    const response = NextResponse.json({ success: true, memberName, isAdmin: false })
-    for (const cookie of buildGuestCookies(roomCode, memberName, pinHash, false)) {
-      response.headers.append('Set-Cookie', cookie)
-    }
-    return response
+    await setGuestCookies(roomCode, memberName, pinHash, false)
+    return NextResponse.json({ success: true, memberName, isAdmin: false })
   }
 
   // Handle authenticated user join flow
