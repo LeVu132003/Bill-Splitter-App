@@ -3,17 +3,40 @@ import { createSupabaseServerClient, createSupabaseAuthClient } from '@/lib/supa
 import { hashPin, ADMIN_NAME, ADMIN_PIN } from '@/lib/utils'
 import type { RoomState } from '@/lib/types'
 
+const COOKIE_MAX_AGE = 60 * 60 * 24 * 30 // 30 days in seconds
+
+/**
+ * Build a Set-Cookie string for guest session
+ */
+function buildGuestCookies(
+  roomCode: string,
+  memberName: string,
+  pinHash: string,
+  isAdmin: boolean
+): string[] {
+  const cookies: string[] = [
+    `room_${roomCode}_member=${encodeURIComponent(memberName)}; Path=/; Max-Age=${COOKIE_MAX_AGE}; SameSite=Lax; HttpOnly`,
+    `room_${roomCode}_pin=${pinHash}; Path=/; Max-Age=${COOKIE_MAX_AGE}; SameSite=Lax; HttpOnly`,
+  ]
+  if (isAdmin) {
+    cookies.push(`room_${roomCode}_admin=true; Path=/; Max-Age=${COOKIE_MAX_AGE}; SameSite=Lax; HttpOnly`)
+  }
+  return cookies
+}
+
 /**
  * POST /api/rooms/join
  * Handles both authenticated and guest user join flows
- * 
+ *
  * For authenticated users:
  * - Requires valid Supabase auth session
  * - Stores room membership in room_members table
- * 
+ *
  * For guest users:
  * - Validates room code, member name, and PIN
- * - Returns session tokens for cookie storage
+ * - Sets session cookies via Set-Cookie headers so they are available
+ *   immediately on the next server render (fixes the redirect loop bug
+ *   that occurred when cookies were set client-side via document.cookie)
  */
 export async function POST(request: NextRequest) {
   const body = await request.json()
@@ -37,7 +60,7 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = await createSupabaseServerClient()
-    
+
     // Fetch room data
     const { data: roomData, error: roomError } = await supabase
       .from('rooms')
@@ -50,33 +73,30 @@ export async function POST(request: NextRequest) {
     }
 
     const roomState = roomData.data as RoomState
-    
+
     // Find member
     const member = roomState.members.find(m => m.name === memberName)
-    
+
     if (!member) {
       return NextResponse.json({ error: 'Member not found' }, { status: 404 })
     }
 
     // Check if admin account
     const isAdmin = memberName === ADMIN_NAME && pin === ADMIN_PIN
-    
+
     if (isAdmin) {
-      // Admin account - special handling
-      return NextResponse.json({
-        success: true,
-        sessionData: {
-          memberName,
-          pinHash: hashPin(pin),
-          isAdmin: true,
-        },
-      })
+      const pinHash = hashPin(pin)
+      const response = NextResponse.json({ success: true, memberName, isAdmin: true })
+      for (const cookie of buildGuestCookies(roomCode, memberName, pinHash, true)) {
+        response.headers.append('Set-Cookie', cookie)
+      }
+      return response
     }
 
     // For first-time users (no PIN set), save the PIN
     if (!member.pin) {
       const pinHash = hashPin(pin)
-      
+
       // Update member with new PIN
       const updatedState: RoomState = {
         ...roomState,
@@ -94,14 +114,11 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Failed to save PIN' }, { status: 500 })
       }
 
-      return NextResponse.json({
-        success: true,
-        sessionData: {
-          memberName,
-          pinHash,
-          isAdmin: false,
-        },
-      })
+      const response = NextResponse.json({ success: true, memberName, isAdmin: false })
+      for (const cookie of buildGuestCookies(roomCode, memberName, pinHash, false)) {
+        response.headers.append('Set-Cookie', cookie)
+      }
+      return response
     }
 
     // Verify PIN for existing users
@@ -110,26 +127,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Incorrect PIN' }, { status: 401 })
     }
 
-    return NextResponse.json({
-      success: true,
-      sessionData: {
-        memberName,
-        pinHash,
-        isAdmin: false,
-      },
-    })
+    const response = NextResponse.json({ success: true, memberName, isAdmin: false })
+    for (const cookie of buildGuestCookies(roomCode, memberName, pinHash, false)) {
+      response.headers.append('Set-Cookie', cookie)
+    }
+    return response
   }
 
   // Handle authenticated user join flow
   const authClient = await createSupabaseAuthClient()
   const { data: { user } } = await authClient.auth.getUser()
-  
+
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   const supabase = await createSupabaseServerClient()
-  
+
   // Verify room exists
   const { data: roomData, error: roomError } = await supabase
     .from('rooms')

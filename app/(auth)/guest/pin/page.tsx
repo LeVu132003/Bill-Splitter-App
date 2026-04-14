@@ -55,7 +55,9 @@ function PINEntryContent() {
     if (!roomData) return
 
     try {
-      // Use the join API to handle guest authentication
+      // Use the join API to handle guest authentication.
+      // The API sets session cookies via Set-Cookie headers server-side,
+      // so they are guaranteed to be present in the next server render.
       const response = await fetch('/api/rooms/join', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -72,19 +74,8 @@ function PINEntryContent() {
         throw new Error(error.error || 'Authentication failed')
       }
 
-      const result = await response.json()
-      const { sessionData } = result
-
-      // Set session cookies using the session data from API
-      const maxAge = 2592000 // 30 days
-      document.cookie = `room_${roomCode}_member=${encodeURIComponent(sessionData.memberName)}; path=/; max-age=${maxAge}; SameSite=Lax`
-      document.cookie = `room_${roomCode}_pin=${sessionData.pinHash}; path=/; max-age=${maxAge}; SameSite=Lax`
-      
-      if (sessionData.isAdmin) {
-        document.cookie = `room_${roomCode}_admin=true; path=/; max-age=${maxAge}; SameSite=Lax`
-      }
-
-      // Redirect to room
+      // Cookies are already set by the API response headers.
+      // Navigate to room — the server will find the session cookies.
       router.push(`/room/${roomCode}`)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Lỗi xác thực — thử lại')
