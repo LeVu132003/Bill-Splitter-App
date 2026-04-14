@@ -1,17 +1,52 @@
 'use client'
 
 import { useRoom } from './RoomProvider'
-import { getNames } from '@/lib/utils'
+import { getNames, generateRoomDeepLink } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
 
 export default function Topbar() {
   const { st, myName, isAdmin, roomCode } = useRoom()
   const router = useRouter()
   const memberCount = getNames(st.members).length
   const txCount = (st.txs || []).length
+  const [isConnected, setIsConnected] = useState(true)
 
-  function copyCode() {
-    navigator.clipboard.writeText(roomCode)
+  // Simulate connection status (in real app, this would track actual connection)
+  useEffect(() => {
+    setIsConnected(true)
+  }, [])
+
+  function copyLink() {
+    const deepLink = generateRoomDeepLink(roomCode)
+    navigator.clipboard.writeText(deepLink).catch(() => {})
+    showToast('✓ Đã copy link — paste vào nhóm chat nhé!')
+  }
+
+  function showToast(message: string) {
+    const toast = document.getElementById('toast')
+    if (!toast) {
+      // Create toast element if it doesn't exist
+      const toastEl = document.createElement('div')
+      toastEl.id = 'toast'
+      toastEl.textContent = message
+      document.body.appendChild(toastEl)
+      
+      // Show toast
+      setTimeout(() => toastEl.classList.add('show'), 10)
+      
+      // Hide and remove after 2.4s
+      setTimeout(() => {
+        toastEl.classList.remove('show')
+        setTimeout(() => toastEl.remove(), 220)
+      }, 2400)
+    } else {
+      toast.textContent = message
+      toast.classList.add('show')
+      setTimeout(() => {
+        toast.classList.remove('show')
+      }, 2400)
+    }
   }
 
   return (
@@ -35,9 +70,10 @@ export default function Topbar() {
           <span>Admin</span>
         </div>
       )}
-      <button className="rpill" onClick={copyCode}>
-        <span className="dot on" />
-        {roomCode}
+      <button className="rpill" onClick={copyLink}>
+        <span className={`dot ${isConnected ? 'on' : ''}`} />
+        <span>{roomCode}</span>
+        <span style={{ fontSize: '10px', color: 'var(--t3)' }}>copy</span>
       </button>
     </div>
   )

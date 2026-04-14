@@ -2,20 +2,15 @@
 
 import { useState } from 'react'
 import { useRoom } from '../RoomProvider'
+import EditForm from './EditForm'
 import { ini, cc, fmtK, timeAgo, uid, getNames, ADMIN_NAME } from '@/lib/utils'
-import type { Tx, SplitMode } from '@/lib/types'
+import type { Tx } from '@/lib/types'
 
 export default function TxCard({ tx }: { tx: Tx }) {
   const { st, myName, isAdmin, syncToServer } = useRoom()
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState(false)
   const [cmtText, setCmtText] = useState('')
-
-  const [editDesc, setEditDesc] = useState(tx.desc)
-  const [editNote, setEditNote] = useState(tx.note || '')
-  const [editAmt, setEditAmt] = useState(String(tx.amountK))
-  const [editPayer, setEditPayer] = useState(tx.payer)
-  const [editParts, setEditParts] = useState<string[]>(tx.parts)
 
   const members = getNames(st.members)
   const nonAdminMembers = members.filter(m => m !== ADMIN_NAME)
@@ -32,20 +27,7 @@ export default function TxCard({ tx }: { tx: Tx }) {
     await syncToServer(newState)
   }
 
-  async function handleSaveEdit() {
-    const amt = parseFloat(editAmt)
-    if (!editDesc.trim() || !amt || amt <= 0) return
-    const updated: Tx = {
-      ...tx,
-      desc: editDesc.trim(),
-      note: editNote.trim() || undefined,
-      amountK: amt,
-      payer: editPayer,
-      parts: editParts.length ? editParts : nonAdminMembers,
-      splits: null,
-      splitMode: tx.splitMode as SplitMode,
-      edited: Date.now(),
-    }
+  async function handleSaveEdit(updated: Tx) {
     const newState = { ...st, txs: st.txs.map(t => t.id === tx.id ? updated : t) }
     setEditing(false)
     await syncToServer(newState)
@@ -75,7 +57,7 @@ export default function TxCard({ tx }: { tx: Tx }) {
     : null
 
   return (
-    <div className={`txcard${isMine ? ' mine' : isAdmin ? ' admin-edit' : ''}`}>
+    <div className={`txcard${isMine ? ' mine' : (isAdmin && !isMine) ? ' admin-edit' : ''}`}>
       <div className="tx-head">
         <div className={`av ${cc(idx >= 0 ? idx : 0)}`}>{ini(tx.payer)}</div>
         <div className="tx-info">
@@ -108,48 +90,12 @@ export default function TxCard({ tx }: { tx: Tx }) {
           )}
 
           {editing && canEdit && (
-            <div className="edit-form">
-              <div className="slbl" style={{ marginBottom: '.5rem' }}>✏️ Chỉnh sửa</div>
-              <div className="edit-row">
-                <div style={{ flex: 1 }}>
-                  <label className="flbl" style={{ fontSize: 11 }}>Tên khoản</label>
-                  <input type="text" value={editDesc} onChange={e => setEditDesc(e.target.value)} style={{ fontSize: 13, padding: '7px 10px' }} />
-                </div>
-                <div style={{ width: 110 }}>
-                  <label className="flbl" style={{ fontSize: 11 }}>Tiền (k)</label>
-                  <div className="amt-wrap">
-                    <input type="number" value={editAmt} onChange={e => setEditAmt(e.target.value)} style={{ fontSize: 13, padding: '7px 30px 7px 10px', fontFamily: 'DM Mono' }} />
-                    <span className="amt-sfx" style={{ right: 8, fontSize: 11 }}>k</span>
-                  </div>
-                </div>
-              </div>
-              <div style={{ marginBottom: 8 }}>
-                <label className="flbl" style={{ fontSize: 11 }}>Mô tả</label>
-                <textarea rows={2} value={editNote} onChange={e => setEditNote(e.target.value)} style={{ fontSize: 13, padding: '7px 10px' }} />
-              </div>
-              <div style={{ marginBottom: 6 }}>
-                <label className="flbl" style={{ fontSize: 11 }}>Người trả</label>
-                <div className="chips" style={{ marginTop: 4 }}>
-                  {nonAdminMembers.map(m => (
-                    <button key={m} className={`chip pay${editPayer === m ? ' on' : ''}`} onClick={() => setEditPayer(m)} style={{ padding: '4px 10px', fontSize: 12 }}>{m}</button>
-                  ))}
-                </div>
-              </div>
-              <div style={{ marginBottom: 8 }}>
-                <label className="flbl" style={{ fontSize: 11 }}>Người tham gia</label>
-                <div className="chips" style={{ marginTop: 4 }}>
-                  {nonAdminMembers.map(m => (
-                    <button key={m} className={`chip${editParts.includes(m) ? ' on' : ''}`}
-                      onClick={() => setEditParts(prev => prev.includes(m) ? prev.filter(x => x !== m) : [...prev, m])}
-                      style={{ padding: '4px 10px', fontSize: 12 }}>{m}</button>
-                  ))}
-                </div>
-              </div>
-              <div style={{ display: 'flex', gap: 7 }}>
-                <button className="btn btn-p btn-sm" onClick={handleSaveEdit}>Lưu</button>
-                <button className="btn btn-sm" onClick={() => setEditing(false)}>Hủy</button>
-              </div>
-            </div>
+            <EditForm
+              tx={tx}
+              members={st.members}
+              onSave={handleSaveEdit}
+              onCancel={() => setEditing(false)}
+            />
           )}
 
           {!editing && canEdit && (

@@ -57,36 +57,14 @@ export function getNames(members: Array<Member | string>): string[] {
 export const ADMIN_NAME = 'admin'
 export const ADMIN_PIN = '132003'
 
-export function calcBal(txs: Tx[], memberNames: string[]): Record<string, number> {
-  const b: Record<string, number> = {}
-  memberNames.forEach(m => { b[m] = 0 })
-  txs.forEach(t => {
-    const k = t.amountK || 0
-    if (t.splits && Object.keys(t.splits).length) {
-      Object.entries(t.splits).forEach(([p, sh]) => {
-        if (b[p] !== undefined) b[p] -= sh
-      })
-    } else {
-      const sh = k / t.parts.length
-      t.parts.forEach(p => { if (b[p] !== undefined) b[p] -= sh })
-    }
-    if (b[t.payer] !== undefined) b[t.payer] += k
-  })
-  return b
-}
 
-export function calcTf(bal: Record<string, number>): Transfer[] {
-  const deb = Object.entries(bal).filter(([, v]) => v < -0.01).map(([n, v]) => ({ n, v })).sort((a, b) => a.v - b.v)
-  const cre = Object.entries(bal).filter(([, v]) => v > 0.01).map(([n, v]) => ({ n, v })).sort((a, b) => b.v - a.v)
-  const out: Transfer[] = []
-  let i = 0, j = 0
-  while (i < deb.length && j < cre.length) {
-    const d = deb[i], c = cre[j]
-    const a = Math.min(-d.v, c.v)
-    out.push({ from: d.n, to: c.n, amountK: a })
-    d.v += a; c.v -= a
-    if (Math.abs(d.v) < 0.01) i++
-    if (Math.abs(c.v) < 0.01) j++
-  }
-  return out
+/**
+ * Generate deep link URL for room access
+ * @param roomCode - The room code (6 characters)
+ * @param baseUrl - Optional base URL (defaults to current origin)
+ * @returns Full deep link URL with room code parameter
+ */
+export function generateRoomDeepLink(roomCode: string, baseUrl?: string): string {
+  const base = baseUrl || (typeof window !== 'undefined' ? window.location.origin : '')
+  return `${base}/guest?r=${roomCode.toUpperCase()}`
 }

@@ -1,15 +1,16 @@
 'use client'
 
 import { useRoom } from '../RoomProvider'
-import { fmtK, calcBal, calcTf, getNames, ADMIN_NAME } from '@/lib/utils'
+import { fmtK, ADMIN_NAME } from '@/lib/utils'
+import { calculateBalances, calculateTransfers } from '@/lib/balance'
 
 export default function StatsBar() {
   const { st } = useRoom()
   const txs = st.txs || []
   const totalK = txs.reduce((s, t) => s + (t.amountK || 0), 0)
-  const members = getNames(st.members).filter(m => m !== ADMIN_NAME)
-  const bal = txs.length ? calcBal(txs, members) : {}
-  const tfs = txs.length ? calcTf({ ...bal }) : []
+  const members = st.members.filter(m => m.name !== ADMIN_NAME)
+  const balancesMap = txs.length ? calculateBalances(members, txs) : null
+  const tfs = balancesMap ? calculateTransfers(balancesMap) : []
 
   return (
     <div className="stats">

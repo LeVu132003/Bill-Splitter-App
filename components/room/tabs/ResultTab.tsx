@@ -4,22 +4,25 @@ import StatsBar from '../result/StatsBar'
 import BalanceList from '../result/BalanceList'
 import TransferList from '../result/TransferList'
 import { useRoom } from '../RoomProvider'
-import { calcBal, calcTf, fmtK, getNames, ADMIN_NAME } from '@/lib/utils'
+import { fmtK, getNames, ADMIN_NAME } from '@/lib/utils'
+import { calculateBalances, calculateTransfers } from '@/lib/balance'
 
 export default function ResultTab() {
   const { st } = useRoom()
 
   function copyResult() {
     const txs = st.txs || []
-    const members = getNames(st.members).filter(m => m !== ADMIN_NAME)
-    const bal = calcBal(txs, members)
-    const tfs = calcTf({ ...bal })
+    const members = st.members.filter(m => m.name !== ADMIN_NAME)
+    const balancesMap = calculateBalances(members, txs)
+    const tfs = calculateTransfers(balancesMap)
+    
     const totalK = txs.reduce((s, t) => s + (t.amountK || 0), 0)
     let text = `💸 ${st.name}\nTổng chi: ${fmtK(totalK)}\n\nSố dư:\n`
-    members.forEach(m => {
-      const b = bal[m] || 0
-      text += `  ${m}: ${b > 0 ? '+' : ''}${fmtK(b)}\n`
+    
+    balancesMap.forEach((row, m) => {
+      text += `  ${m}: ${row.net > 0 ? '+' : ''}${fmtK(row.net)}\n`
     })
+    
     if (tfs.length) {
       text += '\nChuyển khoản:\n'
       tfs.forEach(tf => { text += `  ${tf.from} → ${tf.to}: ${fmtK(tf.amountK)}\n` })

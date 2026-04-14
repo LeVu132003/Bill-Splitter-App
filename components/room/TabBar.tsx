@@ -1,6 +1,6 @@
 'use client'
 
-const TABS = ['👥 Thành viên', '💰 Chi tiêu', '📊 Kết quả']
+const TABS = ['Thành viên', 'Chi tiêu', 'Quyết toán']
 
 interface TabBarProps {
   activeTab: number

@@ -144,26 +144,52 @@ export default function AddTxForm() {
             <label className="flbl">
               {splitMode === 'percent' ? 'Tỉ lệ từng người (%)' : 'Số tiền từng người (k)'}
             </label>
-            {members.map((m, i) => (
-              <div key={m} className="part-row">
-                <span className={`av xs c${i % 8}`} style={{ width: 22, height: 22, fontSize: 8, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%', fontFamily: 'DM Mono', flexShrink: 0 }}>
-                  {m.trim().split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase()}
-                </span>
-                <span className="part-name">{m}</span>
-                <input
-                  type="number"
-                  className="part-input"
-                  placeholder="0"
-                  min="0"
-                  inputMode="decimal"
-                  value={customSplits[m] || ''}
-                  onChange={e => updateCustomSplit(m, e.target.value)}
-                />
-                <span className="part-unit">{splitMode === 'percent' ? '%' : 'k'}</span>
-              </div>
-            ))}
-            {summary && (
-              <div className="split-summary" style={{ display: 'flex' }}>
+            <div style={{ marginTop: '.45rem' }}>
+              {members.map((m, i) => {
+                const isChecked = customSplits[m] !== undefined
+                return (
+                  <div key={m} className="part-row">
+                    <input
+                      type="checkbox"
+                      className="part-check"
+                      id={`pc-${i}`}
+                      checked={isChecked}
+                      onChange={e => {
+                        if (!e.target.checked) {
+                          setCustomSplits(prev => {
+                            const next = { ...prev }
+                            delete next[m]
+                            return next
+                          })
+                        } else {
+                          setCustomSplits(prev => ({ ...prev, [m]: 0 }))
+                        }
+                      }}
+                    />
+                    <span className={`av xs c${i % 8}`} style={{ flexShrink: 0 }}>
+                      {m.trim().split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase()}
+                    </span>
+                    <label className="part-name" htmlFor={`pc-${i}`}>{m}</label>
+                    <input
+                      type="number"
+                      className="part-input"
+                      placeholder="0"
+                      min="0"
+                      inputMode="decimal"
+                      value={customSplits[m] || ''}
+                      disabled={!isChecked}
+                      onChange={e => updateCustomSplit(m, e.target.value)}
+                      onFocus={e => {
+                        if (e.target.value === '0') e.target.value = ''
+                      }}
+                    />
+                    <span className="part-unit">{splitMode === 'percent' ? '%' : 'k'}</span>
+                  </div>
+                )
+              })}
+            </div>
+            {summary && summary.total > 0 && (
+              <div className="split-summary">
                 <span>Tổng: <strong>{summary.label}</strong></span>
                 <span className={summary.ok ? 'split-ok' : 'split-warn'}>
                   {summary.ok ? '✓ Đúng' : '⚠ Chưa khớp'}
