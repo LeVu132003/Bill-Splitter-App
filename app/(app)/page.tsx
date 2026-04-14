@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 
 type Step = 'home' | 'create' | 'join' | 'join-member' | 'join-pin'
 
@@ -161,6 +162,12 @@ export default function HomePage() {
     await joinRoom(code, selectedMember, pinVal)
   }
 
+  async function handleLogout() {
+    const supabase = getSupabaseBrowserClient()
+    await supabase.auth.signOut()
+    router.push('/login')
+  }
+
   if (loading) {
     return (
       <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -172,6 +179,11 @@ export default function HomePage() {
   if (step === 'home') {
     return (
       <div style={{ maxWidth: 540, margin: '0 auto', padding: '2rem 1rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem' }}>
+          <button className="btn btn-sm" onClick={handleLogout} style={{ color: 'var(--t2)', background: 'transparent', borderColor: 'transparent' }}>
+            Đăng xuất
+          </button>
+        </div>
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <div style={{ fontSize: 48, marginBottom: '0.5rem' }}>💸</div>
           <h1 style={{ fontSize: 24, fontWeight: 700 }}>Chia Tiền Nhóm</h1>
