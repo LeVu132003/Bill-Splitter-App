@@ -117,22 +117,29 @@ export default function HomePage() {
     selectMember(newMember.name)
   }
 
+  async function joinRoom(code: string, memberName: string, pin: string) {
+    await fetch('/api/rooms/join', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, memberName }),
+    })
+    setRoomSession(code, memberName, pin)
+    router.push(`/room/${code}`)
+  }
+
   async function handlePinSubmit() {
     setPinError('')
     const code = joinCode.trim().toUpperCase()
     const member = joinMembers.find(m => m.name === selectedMember)
     if (!member) return
 
-    // Admin
     if (selectedMember === 'admin') {
       if (pinVal !== '132003') { setPinError('PIN không đúng!'); return }
-      setRoomSession(code, 'admin', pinVal)
-      router.push(`/room/${code}`)
+      await joinRoom(code, 'admin', pinVal)
       return
     }
 
     if (!member.pin) {
-      // First time — set PIN
       if (!/^\d{6}$/.test(pinVal)) { setPinError('PIN phải đúng 6 chữ số!'); return }
       const { hashPin } = await import('@/lib/utils')
       const updatedMembers = joinMembers.map(m =>
@@ -147,14 +154,11 @@ export default function HomePage() {
           pin: pinVal,
         }),
       })
-      setRoomSession(code, selectedMember, pinVal)
-      router.push(`/room/${code}`)
+      await joinRoom(code, selectedMember, pinVal)
       return
     }
 
-    // Has PIN — just navigate (server will verify on next write)
-    setRoomSession(code, selectedMember, pinVal)
-    router.push(`/room/${code}`)
+    await joinRoom(code, selectedMember, pinVal)
   }
 
   if (loading) {
