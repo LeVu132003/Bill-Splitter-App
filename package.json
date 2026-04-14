@@ -29,11 +29,12 @@
     "tailwindcss-animate": "^1.0.7"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "^4.0.0",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "@tailwindcss/postcss": "^4.0.0",
     "autoprefixer": "^10.5.0",
+    "dotenv": "^16.4.5",
     "eslint": "^9",
     "eslint-config-next": "16.2.3",
     "postcss": "^8.5.9",
