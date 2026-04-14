@@ -51,7 +51,7 @@ body{min-height:100dvh}
 .field{margin-bottom:.7rem}.field:last-child{margin-bottom:0}
 .flbl{font-size:12px;font-weight:500;color:var(--t2);margin-bottom:4px;display:block}
 .fhint{font-size:11px;color:var(--t3);font-weight:400;margin-left:3px}
-input[type=text],input[type=number],textarea{width:100%;padding:9px 13px;background:var(--bg);border:1.5px solid var(--border);border-radius:var(--rsm);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;transition:border-color .15s,box-shadow .15s;-webkit-appearance:none;appearance:none}
+input[type=text],input[type=number],input[type=password],textarea{width:100%;padding:9px 13px;background:var(--bg);border:1.5px solid var(--border);border-radius:var(--rsm);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;transition:border-color .15s,box-shadow .15s;-webkit-appearance:none;appearance:none}
 input:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--abg)}
 input::placeholder,textarea::placeholder{color:var(--t3)}
 textarea{resize:none;line-height:1.5}
